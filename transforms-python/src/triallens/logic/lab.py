@@ -54,7 +54,14 @@ def clean_lab_results(lab_results: DataFrame, salt: str) -> DataFrame:
 
 def clean_biomarker_assays(assays: DataFrame) -> DataFrame:
     """Harmonise analyte names and convert every value (and LLOQ/ULOQ) to pg/mL."""
-    factor = map_values(code_key("unit"), {k: str(v) for k, v in UNIT_TO_PG_PER_ML.items()}).cast("double")
+    unit_key = code_key("unit")
+    factor_expr = None
+    for key, multiplier in UNIT_TO_PG_PER_ML.items():
+        condition = unit_key == key
+        factor_expr = F.when(condition, F.lit(multiplier)) if factor_expr is None else factor_expr.when(condition, F.lit(multiplier))
+    # Materialise the factor once so value, LLOQ and ULOQ are converted identically.
+    assays = assays.withColumn("_unit_factor", factor_expr.cast("double"))
+    factor = F.col("_unit_factor")
     value = parse_decimal("value") * factor
     typed = assays.select(
         clean_str("assay_result_id").alias("assay_result_id"),
