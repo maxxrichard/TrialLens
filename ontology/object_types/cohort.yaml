@@ -1,0 +1,56 @@
+domain: cohort
+object_types:
+  - apiName: Cohort
+    displayName: Cohort
+    description: >-
+      Named set of patients selected for an analysis or a study. Draft cohorts can be
+      edited; locked cohorts are frozen for reproducibility (membership and criteria).
+    primaryKey: cohort_id
+    titleProperty: name
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      writeback: true
+    properties:
+      cohort_id: string
+      name: string
+      description: string
+      study_code: string
+      owner: string
+      status: string
+      n_patients: integer
+      criteria_json: string
+      created_ts: timestamp
+      locked_ts: timestamp
+
+  - apiName: CohortMembership
+    displayName: Cohort Membership
+    description: A patient's membership in a cohort and why they were included.
+    primaryKey: membership_id
+    titleProperty: patient_id
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      writeback: true
+    properties:
+      membership_id: string
+      cohort_id: string
+      patient_id: string
+      added_ts: timestamp
+      added_by: string
+      inclusion_reason: string
+
+  - apiName: CohortCriterion
+    displayName: Cohort Criterion
+    pluralDisplayName: Cohort Criteria
+    description: One inclusion or exclusion criterion of a cohort definition.
+    primaryKey: criterion_id
+    titleProperty: criterion_type
+    markings: [TRIALLENS_OPERATIONAL]
+    backing:
+      writeback: true
+    properties:
+      criterion_id: string
+      cohort_id: string
+      criterion_type: string
+      criterion_json: string
+      is_exclusion: boolean
+      created_ts: timestamp

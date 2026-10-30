@@ -1,0 +1,146 @@
+domain: lab_biomarker
+object_types:
+  - apiName: LabTest
+    displayName: Lab Test
+    description: Routine laboratory test identified by its LOINC code.
+    primaryKey: loinc_code
+    titleProperty: test_name
+    markings: [TRIALLENS_OPERATIONAL]
+    backing:
+      source: clean/lab_results_clean
+      group_by: [loinc_code]
+      aggregations:
+        test_name: max(test_name)
+        unit: max(unit)
+        n_results: count(*)
+    properties:
+      loinc_code: string
+      test_name: string
+      unit: string
+      n_results: integer
+
+  - apiName: LabResult
+    displayName: Lab Result
+    description: Individual routine laboratory result.
+    primaryKey: result_id
+    titleProperty: test_name
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      source: clean/lab_results_clean
+    properties:
+      result_id: string
+      patient_id: string
+      specimen_id: string
+      loinc_code: string
+      test_name: string
+      value: double
+      unit: string
+      is_censored: boolean
+      abnormal_flag: string
+      collected_ts: timestamp
+      resulted_ts: timestamp
+
+  - apiName: Biomarker
+    displayName: Biomarker
+    description: Catalogue entry of a harmonised analyte (fluid biomarker or routine lab).
+    primaryKey: analyte
+    titleProperty: display_name
+    markings: [TRIALLENS_OPERATIONAL]
+    backing:
+      builder: biomarker_catalog
+    properties:
+      analyte: string
+      display_name: string
+      category: string
+      matrix: string
+      unit: string
+      description: string
+
+  - apiName: BiomarkerMeasurement
+    displayName: Biomarker Measurement
+    description: >-
+      One measurement of an analyte for a patient (assay or routine lab), harmonised to a
+      single unit per analyte and flagged against reference ranges and LLOQ/ULOQ.
+    primaryKey: measurement_id
+    titleProperty: analyte
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      source: curated/biomarker_timeseries
+    properties:
+      measurement_id: string
+      patient_id: string
+      specimen_id: string
+      specimen_type: string
+      analyte: string
+      value: double
+      unit: string
+      measured_date: date
+      source: string
+      run_id: string
+      platform: string
+      qc_status: string
+      below_lloq: boolean
+      above_uloq: boolean
+      is_abnormal: boolean
+      days_since_baseline: integer
+
+  - apiName: AssayRun
+    displayName: Assay Run
+    description: Analytical run (plate) on an immunoassay platform, with QC failure counts.
+    primaryKey: run_id
+    titleProperty: run_id
+    markings: [TRIALLENS_BIOSAMPLE_OPS]
+    backing:
+      source: clean/biomarker_assays_clean
+      filter: run_id IS NOT NULL
+      group_by: [run_id]
+      aggregations:
+        platform: max(platform)
+        plate_id: max(plate_id)
+        run_date: min(run_date)
+        n_results: count(*)
+        n_qc_failed: sum(CASE WHEN qc_status = 'FAIL' THEN 1 ELSE 0 END)
+    properties:
+      run_id: string
+      platform: string
+      plate_id: string
+      run_date: date
+      n_results: integer
+      n_qc_failed: integer
+
+  - apiName: ReferenceRange
+    displayName: Reference Range
+    description: Reference interval or decision cut-off for an analyte (illustrative values).
+    primaryKey: range_id
+    titleProperty: range_id
+    markings: [TRIALLENS_OPERATIONAL]
+    backing:
+      builder: reference_ranges
+    properties:
+      range_id: string
+      analyte: string
+      matrix: string
+      unit: string
+      lower_limit: double
+      upper_limit: double
+      note: string
+
+  - apiName: BiomarkerReview
+    displayName: Biomarker Review
+    description: >-
+      Reviewer decision on a biomarker measurement (accept, exclude, request repeat).
+      Created exclusively through the reviewBiomarkerMeasurement action.
+    primaryKey: review_id
+    titleProperty: decision
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      writeback: true
+    properties:
+      review_id: string
+      measurement_id: string
+      patient_id: string
+      decision: string
+      reason: string
+      reviewer: string
+      reviewed_ts: timestamp
+      review_comment: string

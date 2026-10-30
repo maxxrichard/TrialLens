@@ -1,0 +1,66 @@
+app: cohort-builder
+title: Cohort Builder
+audience: [triallens-scientists, triallens-clinicians]
+description: >-
+  Define inclusion / exclusion criteria, see the attrition funnel update live, inspect the
+  matching patients and save the result as a draft cohort that can later be locked.
+variables:
+  - {id: criteriaJson, type: string, default: "[]"}
+  - {id: selectedPatients, type: objectSet, objectType: Patient}
+  - {id: activeCohort, type: object, objectType: Cohort}
+pages:
+  - id: build
+    title: Build cohort
+    layout: three-column
+    widgets:
+      - id: criteriaEditor
+        type: custom-widget
+        description: Criteria form (age, sex, diagnosis, biomarker thresholds, cognition, amyloid, data availability, APOE).
+        writes: [criteriaJson]
+      - id: textToCriteria
+        type: aip-logic
+        flow: cohort-criteria-from-text
+        description: Describe a cohort in plain language; proposed criteria are validated and shown for confirmation.
+        writes: [criteriaJson]
+      - id: funnel
+        type: chart-bar
+        function: CohortFunctions.cohortFunnel
+        inputs: [criteriaJson]
+      - id: matchCount
+        type: metric-card
+        function: CohortFunctions.previewCohortSize
+        inputs: [criteriaJson]
+      - id: patientTable
+        type: object-table
+        objectType: Patient
+        filter: {property: eligible_for_research, equals: true}
+        columns: [patient_id, sex, age_band, primary_diagnosis_group, amyloid_status, latest_mmse, latest_ptau217, latest_nfl, has_mri, has_csf]
+        writes: [selectedPatients]
+      - id: saveCohort
+        type: button-group
+        actions:
+          - {action: createCohort, parameters: {criteriaJson: criteriaJson}}
+          - {action: addPatientsToCohort, parameters: {cohort: activeCohort, patients: selectedPatients}}
+  - id: cohorts
+    title: My cohorts
+    widgets:
+      - id: cohortTable
+        type: object-table
+        objectType: Cohort
+        columns: [name, study_code, status, n_patients, owner, created_ts, locked_ts]
+        writes: [activeCohort]
+      - id: cohortSummary
+        type: metric-card
+        function: CohortFunctions.cohortSummary
+        inputs: [activeCohort]
+      - id: members
+        type: object-table
+        objectType: CohortMembership
+        linkFrom: {variable: activeCohort, link: cohortMemberships}
+        columns: [patient_id, added_ts, added_by, inclusion_reason]
+      - id: cohortActions
+        type: button-group
+        actions:
+          - {action: lockCohort, parameters: {cohort: activeCohort}}
+          - {action: removePatientFromCohort}
+          - {action: requestSpecimenRetrieval, parameters: {cohort: activeCohort}}

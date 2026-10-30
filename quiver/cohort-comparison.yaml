@@ -1,0 +1,35 @@
+analysis: cohort-comparison
+title: Cohort comparison
+audience: [triallens-scientists, triallens-clinicians]
+description: >-
+  Side-by-side comparison of two cohorts (e.g. locked analysis cohort vs. eligible
+  population) for demographics, cognition, biomarkers and data availability.
+inputs:
+  - {id: cohortA, objectType: Cohort}
+  - {id: cohortB, objectType: Cohort}
+  - {id: membersA, objectType: CohortMembership, linkFrom: {input: cohortA, link: cohortMemberships}}
+  - {id: membersB, objectType: CohortMembership, linkFrom: {input: cohortB, link: cohortMemberships}}
+  - {id: patientsA, objectType: Patient, linkFrom: {input: membersA, link: patientCohortMemberships}}
+  - {id: patientsB, objectType: Patient, linkFrom: {input: membersB, link: patientCohortMemberships}}
+cards:
+  - id: demographics
+    type: pivot-table
+    inputs: [patientsA, patientsB]
+    rows: [age_band, sex]
+    metric: count
+  - id: cognition
+    type: box-plot
+    inputs: [patientsA, patientsB]
+    y: latest_mmse
+  - id: biomarkers
+    type: summary-table
+    inputs: [patientsA, patientsB]
+    properties: [latest_abeta42_40_ratio, latest_ptau181, latest_ptau217, latest_nfl, latest_gfap]
+    statistics: [n, median, iqr]
+  - id: availability
+    type: bar-chart
+    inputs: [patientsA, patientsB]
+    properties: [has_csf, has_mri, has_pet, has_genetics]
+    metric: share_true
+privacy:
+  min_cell_size: 5  # counts below 5 are suppressed when exported

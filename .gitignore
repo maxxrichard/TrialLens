@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Local data (synthetic data is generated, never committed; real data never leaves Foundry)
+data/
+*.parquet
+*.csv
+!transforms-python/tests/fixtures/*.csv
+
+# Node
+node_modules/
+functions-typescript/dist/
+coverage/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store

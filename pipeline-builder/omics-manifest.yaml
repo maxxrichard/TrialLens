@@ -1,0 +1,22 @@
+# Pipeline Builder pipeline (exported definition, reviewed in Git). See imaging-series.yaml.
+pipeline: omics-manifest
+owner_team: Genomics Core
+inputs: [raw/omics_sample_manifest]
+output: clean/omics_samples_clean
+reference_implementation: triallens.logic.omics.clean_omics_samples
+boards:
+  - {id: trim, type: trim-whitespace, columns: all}
+  - {id: ids, type: upper-case, columns: [omics_sample_id, specimen_barcode, flowcell]}
+  - {id: specimen, type: rename, from: specimen_barcode, to: specimen_id}
+  - id: assay
+    type: map-values
+    column: assay_type
+    normalize: alphanumeric-upper
+    mapping: {RNASEQ: RNASEQ, RNA: RNASEQ, WGS: WGS, SNPARRAY: GENOTYPING_ARRAY, GSA: GENOTYPING_ARRAY, GENOTYPINGARRAY: GENOTYPING_ARRAY, OLINK: PROTEOMICS, PROTEOMICS: PROTEOMICS}
+    unmapped: "null"
+  - {id: qc, type: parse-boolean, column: qc_pass, default: false}
+  - {id: md5, type: case-when, column: file_md5, rules: [{matches: "^[0-9a-f]{32}$", value: "lower(file_md5)"}], otherwise: "null"}
+  - {id: reads, type: cast, columns: {read_count: long}}
+  - {id: valid, type: filter, condition: "omics_sample_id IS NOT NULL AND specimen_id IS NOT NULL AND assay_type IS NOT NULL"}
+  - {id: dedupe, type: drop-duplicates, keys: [omics_sample_id]}
+expectations: see transforms-python/src/triallens/config/expectations.yaml#omics_samples_clean

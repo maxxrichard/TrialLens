@@ -1,0 +1,24 @@
+# Evaluation cases for cohort-criteria-from-text. Each expected value is the normalised
+# output of AipTools.validateProposedCriteria; runs are compared by exact match.
+cases:
+  - input: amyloid-positive MCI or Alzheimer's patients aged 55 to 80 with MMSE of at least 20
+    expected:
+      - {type: DIAGNOSIS_GROUP, values: [MCI, ALZHEIMERS], exclude: false}
+      - {type: AMYLOID_STATUS, value: POSITIVE, exclude: false}
+      - {type: AGE_RANGE, min: 55, max: 80, exclude: false}
+      - {type: COGNITIVE_SCORE, instrument: MMSE, operator: ">=", value: 20, exclude: false}
+
+  - input: cognitively unimpaired controls with CSF and MRI, excluding APOE e4 carriers
+    expected:
+      - {type: DIAGNOSIS_GROUP, values: [NONE], exclude: false}
+      - {type: HAS_DATA, modality: CSF, exclude: false}
+      - {type: HAS_DATA, modality: MRI, exclude: false}
+      - {type: APOE_E4_CARRIER, value: true, exclude: true}
+
+  - input: FTD or ALS patients with plasma NfL above 40 pg/mL
+    expected:
+      - {type: DIAGNOSIS_GROUP, values: [FTD, ALS], exclude: false}
+      - {type: BIOMARKER, analyte: NFL, operator: ">", value: 40, exclude: false}
+
+  - input: women over 65 with a high p-tau217
+    expected_open_question: true  # no threshold given -> the flow must ask instead of guessing

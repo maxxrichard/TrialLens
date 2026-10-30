@@ -1,0 +1,134 @@
+domain: clinical
+object_types:
+  - apiName: Patient
+    displayName: Patient
+    description: >-
+      Pseudonymised research participant with every feature used for cohort selection.
+      No direct identifiers; birth date reduced to year, postal code to 2-digit region.
+    primaryKey: patient_id
+    titleProperty: patient_id
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      source: curated/cohort_features
+    properties:
+      patient_id: string
+      sex: string
+      birth_year: integer
+      age_years: integer
+      age_band: string
+      postal_region: string
+      home_site_code: string
+      is_deceased: boolean
+      primary_diagnosis_group: string
+      latest_mmse: double
+      latest_moca: double
+      latest_cdr_sb: double
+      latest_abeta42_40_ratio: double
+      latest_ptau181: double
+      latest_ptau217: double
+      latest_nfl: double
+      latest_gfap: double
+      amyloid_status: string
+      has_csf: boolean
+      has_mri: boolean
+      has_pet: boolean
+      has_genetics: boolean
+      apoe_genotype: string
+      apoe_e4_carrier: boolean
+      n_studies: integer
+      consent_genetics: boolean
+      consent_research: boolean
+      eligible_for_research: boolean
+
+  - apiName: Encounter
+    displayName: Encounter
+    description: Hospital encounter (outpatient visit, admission, emergency, telehealth).
+    primaryKey: encounter_id
+    titleProperty: encounter_id
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      source: curated/encounter_timeline
+    properties:
+      encounter_id: string
+      patient_id: string
+      encounter_type: string
+      admit_ts: timestamp
+      discharge_ts: timestamp
+      length_of_stay_days: integer
+      site_code: string
+      department: string
+
+  - apiName: Diagnosis
+    displayName: Diagnosis
+    pluralDisplayName: Diagnoses
+    description: ICD-10-GM coded diagnosis with chapter and neurodegenerative disease group.
+    primaryKey: diagnosis_id
+    titleProperty: icd10_code
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      source: curated/diagnosis_curated
+    properties:
+      diagnosis_id: string
+      encounter_id: string
+      patient_id: string
+      icd10_code: string
+      icd10_chapter: string
+      diagnosis_group: string
+      diagnosis_date: date
+      is_primary: boolean
+
+  - apiName: Medication
+    displayName: Medication
+    description: Medication order with ATC classification.
+    primaryKey: medication_id
+    titleProperty: drug_name
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      source: clean/ehr_medications_clean
+    properties:
+      medication_id: string
+      patient_id: string
+      atc_code: string
+      drug_name: string
+      start_date: date
+      end_date: date
+      dose_mg: double
+      route: string
+
+  - apiName: CognitiveAssessment
+    displayName: Cognitive Assessment
+    description: Score on a cognitive instrument (MMSE, MoCA, CDR-SB, ADAS-Cog13) at a study visit.
+    primaryKey: assessment_id
+    titleProperty: instrument
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      source: curated/cognitive_scores
+    properties:
+      assessment_id: string
+      visit_id: string
+      patient_id: string
+      visit_code: string
+      instrument: string
+      score: double
+      score_max: double
+      score_normalized: double
+      impairment_flag: boolean
+      assessed_date: date
+      rater_id: string
+
+  - apiName: Site
+    displayName: Site
+    description: Recruiting clinical site.
+    primaryKey: site_code
+    titleProperty: site_name
+    markings: [TRIALLENS_OPERATIONAL]
+    backing:
+      source: clean/ctms_enrollment_clean
+      group_by: [site_code]
+      aggregations:
+        site_name: max(site_name)
+        n_enrollments: count(*)
+    properties:
+      site_code: string
+      site_name: string
+      n_enrollments: integer

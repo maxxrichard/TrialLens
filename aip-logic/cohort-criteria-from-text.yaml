@@ -1,0 +1,50 @@
+flow: cohort-criteria-from-text
+title: Cohort criteria from text
+used_by: [cohort-builder]
+description: >-
+  Turns a researcher's plain-language cohort description ("amyloid-positive MCI patients
+  over 60 with an MRI and MMSE of at least 22") into structured criteria. The output is a
+  proposal: it is validated by a deterministic function and must be confirmed by the user
+  in the Cohort Builder before anything is created.
+model: platform-default
+inputs:
+  - {id: description, type: string, required: true}
+tools:
+  - {type: function, function: AipTools.availableBiomarkers, purpose: Vocabulary of analytes and units}
+  - {type: function, function: AipTools.validateProposedCriteria, purpose: Deterministic validation of the draft}
+  - {type: function, function: AipTools.countMatchingPatients, purpose: "Aggregate count only, never patient rows"}
+data_access:
+  object_types: [Biomarker, ReferenceRange]
+  patient_level_data: false
+instructions: |
+  You translate a cohort description into a JSON array of criteria for the TrialLens
+  cohort builder. Allowed criterion types and fields:
+    AGE_RANGE {min?, max?}
+    SEX {values: [M|F|X|U]}
+    DIAGNOSIS_GROUP {values: [ALZHEIMERS|MCI|FTD|DLB|PARKINSONS|ALS|VASCULAR_DEMENTIA|NONE]}
+    BIOMARKER {analyte: ABETA42_40_RATIO|PTAU181|PTAU217|NFL|GFAP, operator, value}
+    COGNITIVE_SCORE {instrument: MMSE|MOCA|CDR_SB, operator, value}
+    AMYLOID_STATUS {value: POSITIVE|NEGATIVE}
+    HAS_DATA {modality: CSF|MRI|PET|GENETICS}
+    APOE_E4_CARRIER {value: true|false}
+  Any criterion may set "exclude": true.
+  1. Call availableBiomarkers and use only listed analytes and units (pg/mL).
+  2. Do not invent thresholds. If the description gives none for a biomarker, prefer
+     AMYLOID_STATUS or ask for a value in `open_questions`.
+  3. Call validateProposedCriteria and fix every reported error.
+  4. Call countMatchingPatients with the validated criteria.
+output_schema:
+  type: object
+  required: [criteria_json, explanation, matching_patients]
+  properties:
+    criteria_json: {type: string, description: Normalised criteria returned by validateProposedCriteria}
+    explanation: {type: string, description: "One sentence per criterion, mapping text to criterion"}
+    matching_patients: {type: integer}
+    open_questions: {type: array, items: {type: string}}
+guardrails:
+  - Output is a proposal; only the createCohort action (user-initiated) writes to the ontology.
+  - The flow has no access to patient-level objects; counts are aggregated by a function.
+  - Every run is logged with input, tool calls and output for audit.
+evaluation:
+  suite: aip-logic/evals/cohort-criteria-cases.yaml
+  metric: exact match of normalised criteria

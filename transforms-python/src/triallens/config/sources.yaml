@@ -1,0 +1,159 @@
+# The 14 upstream sources integrated by TrialLens.
+#
+# Every source lands unmodified in /TrialLens/data/raw/<name> via Data Connection
+# (all columns as strings). Cleaning, pseudonymisation and typing happen in the
+# clean layer; see transforms-python/src/triallens/pipeline_spec.py.
+sources:
+  - name: ehr_patients
+    display_name: EHR patient demographics
+    system: Hospital EHR (HL7v2 ADT extract)
+    domain: clinical
+    format: csv
+    refresh: daily
+    owner_team: Clinical Data Management
+    contains_personal_data: true
+    markings: [TRIALLENS_DIRECT_IDENTIFIERS]
+    columns: [mrn, sex, birth_date, postal_code, ethnicity, deceased_date, site_code, last_updated]
+
+  - name: ehr_encounters
+    display_name: EHR encounters
+    system: Hospital EHR (HL7v2 ADT extract)
+    domain: clinical
+    format: csv
+    refresh: daily
+    owner_team: Clinical Data Management
+    contains_personal_data: true
+    markings: [TRIALLENS_DIRECT_IDENTIFIERS]
+    columns: [encounter_id, mrn, encounter_type, admit_ts, discharge_ts, site_code, department]
+
+  - name: ehr_diagnoses
+    display_name: EHR diagnoses (ICD-10-GM)
+    system: Hospital EHR (billing extract)
+    domain: clinical
+    format: csv
+    refresh: daily
+    owner_team: Clinical Data Management
+    contains_personal_data: true
+    markings: [TRIALLENS_DIRECT_IDENTIFIERS]
+    columns: [diagnosis_id, encounter_id, mrn, icd10_code, diagnosis_date, is_primary]
+
+  - name: ehr_medications
+    display_name: EHR medication orders (ATC)
+    system: Hospital EHR (pharmacy extract)
+    domain: clinical
+    format: csv
+    refresh: daily
+    owner_team: Clinical Data Management
+    contains_personal_data: true
+    markings: [TRIALLENS_DIRECT_IDENTIFIERS]
+    columns: [medication_id, mrn, atc_code, drug_name, start_date, end_date, dose_mg, route]
+
+  - name: lab_results
+    display_name: Routine clinical laboratory results (LOINC)
+    system: LIMS results interface
+    domain: lab
+    format: csv
+    refresh: hourly
+    owner_team: Clinical Laboratory
+    contains_personal_data: true
+    markings: [TRIALLENS_DIRECT_IDENTIFIERS]
+    columns: [result_id, mrn, specimen_barcode, loinc_code, test_name, value, unit, collected_ts, resulted_ts, abnormal_flag]
+
+  - name: lims_specimens
+    display_name: Biobank specimen inventory
+    system: LIMS sample inventory
+    domain: specimen
+    format: csv
+    refresh: hourly
+    owner_team: Biobank Operations
+    contains_personal_data: true
+    markings: [TRIALLENS_DIRECT_IDENTIFIERS, TRIALLENS_BIOSAMPLE_OPS]
+    columns: [specimen_barcode, parent_barcode, mrn, specimen_type, collected_ts, received_ts, freezer_id, rack, box, position, volume_ul, shipment_id, status]
+
+  - name: biomarker_assays
+    display_name: Fluid biomarker assay results (CSF / plasma)
+    system: Immunoassay platform exports (Simoa, Lumipulse, Elecsys)
+    domain: lab
+    format: csv
+    refresh: per run
+    owner_team: Biomarker Laboratory
+    contains_personal_data: false
+    markings: [TRIALLENS_BIOSAMPLE_OPS]
+    columns: [assay_result_id, specimen_barcode, run_id, plate_id, platform, analyte, value, unit, lloq, uloq, run_date, qc_status]
+
+  - name: imaging_dicom_metadata
+    display_name: Imaging DICOM header metadata
+    system: PACS DICOM header crawler
+    domain: imaging
+    format: csv
+    refresh: daily
+    owner_team: Neuroimaging Core
+    contains_personal_data: true
+    markings: [TRIALLENS_DIRECT_IDENTIFIERS, TRIALLENS_IMAGING]
+    columns: [study_instance_uid, series_instance_uid, mrn, modality, series_description, acquisition_date, scanner_serial, manufacturer, field_strength_t, slice_thickness_mm, num_instances]
+
+  - name: imaging_derived_measures
+    display_name: Imaging derived measures (volumetrics, SUVR)
+    system: Neuroimaging processing pipelines
+    domain: imaging
+    format: csv
+    refresh: per pipeline run
+    owner_team: Neuroimaging Core
+    contains_personal_data: false
+    markings: [TRIALLENS_IMAGING]
+    columns: [measure_id, series_instance_uid, region, metric, value, pipeline_version, computed_ts]
+
+  - name: omics_sample_manifest
+    display_name: Omics sample manifest
+    system: Sequencing / genotyping core LIMS
+    domain: omics
+    format: csv
+    refresh: per run
+    owner_team: Genomics Core
+    contains_personal_data: false
+    markings: [TRIALLENS_GENETIC]
+    columns: [omics_sample_id, specimen_barcode, assay_type, sequencing_run_id, flowcell, instrument, run_date, read_count, qc_pass, file_uri, file_md5]
+
+  - name: omics_genotypes
+    display_name: Targeted genotype calls
+    system: Genotyping array calling pipeline
+    domain: omics
+    format: csv
+    refresh: per run
+    owner_team: Genomics Core
+    contains_personal_data: false
+    markings: [TRIALLENS_GENETIC]
+    columns: [call_id, omics_sample_id, gene, variant_id, genotype, quality]
+
+  - name: cognitive_assessments
+    display_name: Cognitive assessments (eCRF)
+    system: Electronic data capture (eCRF)
+    domain: clinical
+    format: csv
+    refresh: daily
+    owner_team: Study Operations
+    contains_personal_data: true
+    markings: [TRIALLENS_DIRECT_IDENTIFIERS]
+    columns: [assessment_id, mrn, visit_code, instrument, score, assessed_date, rater_id]
+
+  - name: ctms_enrollment
+    display_name: Study enrollment
+    system: Clinical trial management system (CTMS)
+    domain: study
+    format: csv
+    refresh: daily
+    owner_team: Study Operations
+    contains_personal_data: true
+    markings: [TRIALLENS_DIRECT_IDENTIFIERS]
+    columns: [enrollment_id, mrn, study_code, study_title, study_phase, arm, site_code, site_name, enrolled_date, status, withdrawn_date]
+
+  - name: consent_registry
+    display_name: Informed consent registry
+    system: eConsent registry
+    domain: study
+    format: csv
+    refresh: hourly
+    owner_team: Study Operations
+    contains_personal_data: true
+    markings: [TRIALLENS_DIRECT_IDENTIFIERS]
+    columns: [consent_id, mrn, study_code, consent_version, scope, granted, signed_date, withdrawn_date]

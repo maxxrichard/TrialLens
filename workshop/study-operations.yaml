@@ -1,0 +1,47 @@
+app: study-operations
+title: Study Operations
+audience: [triallens-clinicians, triallens-data-stewards]
+description: >-
+  Enrollment and consent overview per study and site: recruitment progress, withdrawals,
+  consent coverage per scope and participants with consent gaps.
+variables:
+  - {id: selectedStudy, type: object, objectType: Study}
+  - {id: selectedEnrollment, type: object, objectType: Enrollment}
+pages:
+  - id: studies
+    title: Studies
+    widgets:
+      - id: studyTable
+        type: object-table
+        objectType: Study
+        columns: [study_code, study_title, study_phase, n_enrollments, n_sites]
+        writes: [selectedStudy]
+      - id: enrollmentBySite
+        type: chart-bar
+        objectType: Enrollment
+        linkFrom: {variable: selectedStudy, link: studyEnrollments}
+        x: site_code
+        groupBy: status
+      - id: recruitmentCurve
+        type: chart-xy
+        objectType: Enrollment
+        linkFrom: {variable: selectedStudy, link: studyEnrollments}
+        x: enrolled_date
+        cumulative: true
+  - id: consent
+    title: Consent
+    widgets:
+      - id: consentGaps
+        type: object-table
+        objectType: Enrollment
+        filter: {property: is_consent_valid, equals: false}
+        columns: [enrollment_id, patient_id, study_code, site_code, status, consent_clinical_data, consent_biosamples, consent_genetics]
+        writes: [selectedEnrollment]
+      - id: consentRecords
+        type: object-table
+        objectType: ConsentRecord
+        columns: [consent_id, study_code, scope, consent_version, granted, signed_date, withdrawn_date, is_active]
+      - id: sites
+        type: object-table
+        objectType: Site
+        columns: [site_code, site_name, n_enrollments]

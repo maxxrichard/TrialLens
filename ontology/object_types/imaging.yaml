@@ -1,0 +1,83 @@
+domain: imaging
+object_types:
+  - apiName: ImagingStudy
+    displayName: Imaging Study
+    pluralDisplayName: Imaging Studies
+    description: DICOM study (one imaging session) grouping one or more series.
+    primaryKey: study_id
+    titleProperty: study_id
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL, TRIALLENS_IMAGING]
+    backing:
+      source: curated/imaging_studies
+      group_by: [study_id, patient_id]
+      aggregations:
+        acquisition_date: min(acquisition_date)
+        n_series: count(*)
+        modalities: concat_ws(',', sort_array(collect_set(modality)))
+    properties:
+      study_id: string
+      patient_id: string
+      acquisition_date: date
+      n_series: integer
+      modalities: string
+
+  - apiName: ImagingSeries
+    displayName: Imaging Series
+    pluralDisplayName: Imaging Series
+    description: DICOM series with key derived measures (hippocampal volume, amyloid SUVR).
+    primaryKey: series_id
+    titleProperty: series_description
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL, TRIALLENS_IMAGING]
+    backing:
+      source: curated/imaging_studies
+    properties:
+      series_id: string
+      study_id: string
+      patient_id: string
+      modality: string
+      series_description: string
+      acquisition_date: date
+      scanner_id: string
+      field_strength_t: double
+      slice_thickness_mm: double
+      num_instances: integer
+      hippocampal_volume_mm3: double
+      amyloid_suvr: double
+      mean_cortical_thickness_mm: double
+
+  - apiName: ImagingMeasure
+    displayName: Imaging Measure
+    description: Single derived measure (region x metric) produced by a versioned processing pipeline.
+    primaryKey: measure_id
+    titleProperty: region
+    markings: [TRIALLENS_IMAGING]
+    backing:
+      source: clean/imaging_measures_clean
+    properties:
+      measure_id: string
+      series_id: string
+      region: string
+      metric: string
+      value: double
+      pipeline_version: string
+      computed_ts: timestamp
+
+  - apiName: Scanner
+    displayName: Scanner
+    description: Imaging device, used to monitor scanner effects across sites.
+    primaryKey: scanner_id
+    titleProperty: scanner_id
+    markings: [TRIALLENS_OPERATIONAL]
+    backing:
+      source: clean/imaging_series_clean
+      filter: scanner_id IS NOT NULL
+      group_by: [scanner_id]
+      aggregations:
+        manufacturer: max(manufacturer)
+        field_strength_t: max(field_strength_t)
+        n_series: count(*)
+    properties:
+      scanner_id: string
+      manufacturer: string
+      field_strength_t: double
+      n_series: integer

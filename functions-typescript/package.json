@@ -1,0 +1,18 @@
+{
+  "name": "triallens-functions",
+  "version": "1.4.0",
+  "private": true,
+  "description": "Foundry Functions for TrialLens: cohort criteria, biomarker review and data-quality triage.",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@types/jest": "29.5.12",
+    "jest": "29.7.0",
+    "ts-jest": "29.1.2",
+    "typescript": "5.4.5"
+  }
+}

@@ -1,0 +1,28 @@
+# Pipeline Builder pipeline (exported definition, reviewed in Git).
+#
+# The imaging and omics ingestion pipelines are maintained in Pipeline Builder so the
+# neuroimaging and genomics cores can change mappings without writing code. The PySpark
+# functions in transforms-python/src/triallens/logic are the reference implementation of
+# the same logic: they are used for local runs and CI, and every board change is
+# mirrored there in the same pull request (enforced in review, see CONTRIBUTING.md).
+pipeline: imaging-series
+owner_team: Neuroimaging Core
+inputs: [raw/imaging_dicom_metadata]
+output: clean/imaging_series_clean
+reference_implementation: triallens.logic.imaging.clean_imaging_series
+boards:
+  - {id: trim, type: trim-whitespace, columns: all}
+  - {id: uid, type: rename, from: series_instance_uid, to: series_id}
+  - {id: study, type: rename, from: study_instance_uid, to: study_id}
+  - {id: pseudonym, type: udf, function: triallens-pseudonymize, input: mrn, output: patient_id}
+  - id: modality
+    type: map-values
+    column: modality
+    mapping: {MR: MR, MRI: MR, PT: PT, PET: PT, CT: CT}
+    unmapped: "null"
+  - {id: date, type: parse-date, column: acquisition_date, formats: [yyyy-MM-dd, dd.MM.yyyy, yyyyMMdd]}
+  - {id: manufacturer, type: case-when, column: manufacturer, rules: [{contains: SIEMENS, value: SIEMENS}, {contains: PHILIPS, value: PHILIPS}, {startsWith: GE, value: GE_HEALTHCARE}]}
+  - {id: numbers, type: cast, columns: {field_strength_t: double, slice_thickness_mm: double, num_instances: integer}, decimal_comma: true}
+  - {id: valid, type: filter, condition: "series_id RLIKE '^[0-9]+(\\.[0-9]+)*$' AND patient_id IS NOT NULL AND modality IS NOT NULL"}
+  - {id: dedupe, type: drop-duplicates, keys: [series_id]}
+expectations: see transforms-python/src/triallens/config/expectations.yaml#imaging_series_clean

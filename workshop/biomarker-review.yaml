@@ -1,0 +1,59 @@
+app: biomarker-review
+title: Biomarker Review
+audience: [triallens-biomarker-reviewers]
+description: >-
+  Run-by-run review of fluid biomarker results. Each measurement shows its suggested
+  decision, flags (QC, LLOQ/ULOQ, reference range, change from previous) and the patient's
+  trajectory; the reviewer records the final decision through an audited action.
+variables:
+  - {id: selectedRun, type: object, objectType: AssayRun}
+  - {id: selectedMeasurement, type: object, objectType: BiomarkerMeasurement}
+pages:
+  - id: runs
+    title: Assay runs
+    widgets:
+      - id: runTable
+        type: object-table
+        objectType: AssayRun
+        columns: [run_id, platform, plate_id, run_date, n_results, n_qc_failed]
+        sort: {property: run_date, direction: desc}
+        writes: [selectedRun]
+      - id: failRateChart
+        type: chart-xy
+        objectType: AssayRun
+        x: run_date
+        y: n_qc_failed
+        groupBy: platform
+  - id: review
+    title: Review queue
+    widgets:
+      - id: queue
+        type: object-table
+        objectType: BiomarkerMeasurement
+        linkFrom: {variable: selectedRun, link: assayRunMeasurements}
+        columns: [measurement_id, analyte, value, unit, qc_status, below_lloq, above_uloq, is_abnormal, measured_date]
+        writes: [selectedMeasurement]
+      - id: suggestion
+        type: function-panel
+        function: BiomarkerReviewFunctions.suggestBiomarkerReview
+        inputs: [selectedMeasurement]
+      - id: trajectory
+        type: chart-xy
+        objectType: BiomarkerMeasurement
+        description: Same patient and analyte over time, QC-failed points hollow.
+        x: measured_date
+        y: value
+        filterFrom: {variable: selectedMeasurement, properties: [patient_id, analyte]}
+      - id: referenceRange
+        type: object-view
+        objectType: ReferenceRange
+        description: Reference range of the selected analyte.
+      - id: previousReviews
+        type: object-table
+        objectType: BiomarkerReview
+        linkFrom: {variable: selectedMeasurement, link: measurementReviews}
+        columns: [decision, reason, reviewer, reviewed_ts, review_comment]
+      - id: decide
+        type: button-group
+        actions:
+          - {action: reviewBiomarkerMeasurement, parameters: {measurement: selectedMeasurement}}

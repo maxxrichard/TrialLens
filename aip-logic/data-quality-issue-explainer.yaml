@@ -1,0 +1,25 @@
+flow: data-quality-issue-explainer
+title: Data-quality issue explainer
+used_by: [data-quality-dashboard]
+description: >-
+  Explains a data-quality issue to the data steward: what the rule checks, the likely
+  upstream cause based on the source system, and the usual fix. Suggests (does not set)
+  an assignee team from the DataSource owner.
+model: platform-default
+inputs:
+  - {id: issue, type: objectReference, objectType: DataQualityIssue, required: true}
+data_access:
+  object_types: [DataQualityIssue, DataQualityCheck, DataSource]
+  patient_level_data: false
+instructions: |
+  Using the issue, its check and the owning data source, explain in plain language:
+  (1) what was detected, (2) the most likely cause in the source system, (3) the
+  recommended next step and the owner team to contact. Keep it under 120 words.
+output_schema:
+  type: object
+  required: [explanation, suggested_owner_team]
+  properties:
+    explanation: {type: string}
+    suggested_owner_team: {type: string}
+guardrails:
+  - Status changes go through updateDataQualityIssue only.

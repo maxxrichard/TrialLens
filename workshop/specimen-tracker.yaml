@@ -1,0 +1,43 @@
+app: specimen-tracker
+title: Specimen Tracker
+audience: [triallens-biobank, triallens-scientists]
+description: >-
+  Find available aliquots for a patient or cohort, check pre-analytical quality and
+  storage location, and request retrieval from the biobank (sent to the LIMS).
+variables:
+  - {id: selectedPatient, type: object, objectType: Patient}
+  - {id: selectedSpecimens, type: objectSet, objectType: Specimen}
+pages:
+  - id: inventory
+    title: Inventory
+    widgets:
+      - id: freezers
+        type: object-table
+        objectType: Freezer
+        columns: [freezer_id, n_specimens, n_boxes]
+      - id: specimensByType
+        type: chart-bar
+        objectType: Specimen
+        x: specimen_type
+        groupBy: status
+      - id: shipments
+        type: object-table
+        objectType: Shipment
+        columns: [shipment_id, n_specimens, n_in_transit, first_collected_ts, last_received_ts]
+  - id: find
+    title: Find specimens
+    widgets:
+      - id: patientSearch
+        type: object-search
+        objectType: Patient
+        writes: [selectedPatient]
+      - id: specimens
+        type: object-table
+        objectType: Specimen
+        linkFrom: {variable: selectedPatient, link: patientSpecimens}
+        columns: [specimen_id, specimen_type, parent_specimen_id, collected_ts, processing_delay_hours, volume_ul, storage_location_id, status]
+        writes: [selectedSpecimens]
+      - id: request
+        type: button-group
+        actions:
+          - {action: requestSpecimenRetrieval, parameters: {specimens: selectedSpecimens}}

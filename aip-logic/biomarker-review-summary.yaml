@@ -1,0 +1,29 @@
+flow: biomarker-review-summary
+title: Assay run review summary
+used_by: [biomarker-review]
+description: >-
+  Drafts a short narrative summary of an assay run for the laboratory sign-off: QC
+  failures, results outside the quantification range, unusual changes. The numbers come
+  from deterministic functions; the model only writes the narrative.
+model: platform-default
+inputs:
+  - {id: run, type: objectReference, objectType: AssayRun, required: true}
+tools:
+  - {type: function, function: BiomarkerReviewFunctions.assayRunReviewQueue, purpose: Flags and suggested decisions per measurement}
+data_access:
+  object_types: [AssayRun, BiomarkerMeasurement, ReferenceRange]
+  patient_level_data: pseudonymised
+instructions: |
+  Summarise the run in at most 6 bullet points for the laboratory lead. Report counts of
+  suggested repeats and their reasons, analytes affected, and whether the run looks
+  systematically shifted. Refer to measurements by measurement_id only. Never recommend
+  EXCLUDED; exclusions are a human decision.
+output_schema:
+  type: object
+  required: [summary_markdown, n_repeats]
+  properties:
+    summary_markdown: {type: string}
+    n_repeats: {type: integer}
+guardrails:
+  - Read-only; decisions are recorded only through reviewBiomarkerMeasurement.
+  - Pseudonymised identifiers only.

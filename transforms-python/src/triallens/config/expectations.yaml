@@ -1,0 +1,188 @@
+# Data-quality expectations, evaluated on every build.
+#
+# In Foundry each entry becomes a `Check` on the transform output
+# (see triallens/quality/foundry_checks.py) and is surfaced in Data Health.
+# Locally and in CI the same entries are evaluated by triallens/quality/engine.py.
+#
+# Supported kinds:
+#   primary_key   column            - non-null and unique
+#   not_null      column
+#   in_set        column, values    - nulls ignored
+#   range         column, min, max  - inclusive, nulls ignored
+#   regex         column, pattern   - nulls ignored
+#   row_count_min min
+#
+# on_error defaults to FAIL (the build is aborted); WARN only raises a Data Health alert.
+#
+# 24 datasets x 5 expectations = 120 expectations.
+
+datasets:
+  # ---------------------------------------------------------------- clean layer
+  ehr_patients_clean:
+    - {name: patient_id_pk, kind: primary_key, column: patient_id}
+    - {name: sex_valid, kind: in_set, column: sex, values: [M, F, X, U]}
+    - {name: birth_year_plausible, kind: range, column: birth_year, min: 1900, max: 2025}
+    - {name: site_code_present, kind: not_null, column: site_code}
+    - {name: non_empty, kind: row_count_min, min: 1}
+
+  ehr_encounters_clean:
+    - {name: encounter_id_pk, kind: primary_key, column: encounter_id}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+    - {name: encounter_type_valid, kind: in_set, column: encounter_type, values: [OUTPATIENT, INPATIENT, EMERGENCY, TELEHEALTH, OTHER]}
+    - {name: admit_ts_present, kind: not_null, column: admit_ts}
+    - {name: non_empty, kind: row_count_min, min: 1}
+
+  ehr_diagnoses_clean:
+    - {name: diagnosis_id_pk, kind: primary_key, column: diagnosis_id}
+    - {name: icd10_format, kind: regex, column: icd10_code, pattern: '^[A-Z][0-9]{2}(\.[0-9A-Z]{1,4})?$'}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+    - {name: diagnosis_date_present, kind: not_null, column: diagnosis_date}
+    - {name: is_primary_present, kind: not_null, column: is_primary}
+
+  ehr_medications_clean:
+    - {name: medication_id_pk, kind: primary_key, column: medication_id}
+    - {name: atc_format, kind: regex, column: atc_code, pattern: '^[A-Z][0-9]{2}[A-Z]{2}[0-9]{2}$'}
+    - {name: dose_plausible, kind: range, column: dose_mg, min: 0, max: 5000}
+    - {name: start_date_present, kind: not_null, column: start_date}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+
+  lab_results_clean:
+    - {name: result_id_pk, kind: primary_key, column: result_id}
+    - {name: loinc_format, kind: regex, column: loinc_code, pattern: '^[0-9]{1,7}-[0-9]$'}
+    - {name: value_present, kind: not_null, column: value}
+    - {name: collected_ts_present, kind: not_null, column: collected_ts}
+    - {name: abnormal_flag_valid, kind: in_set, column: abnormal_flag, values: [H, L, N]}
+
+  lims_specimens_clean:
+    - {name: specimen_id_pk, kind: primary_key, column: specimen_id}
+    - {name: specimen_type_valid, kind: in_set, column: specimen_type, values: [CSF, PLASMA, SERUM, WHOLE_BLOOD, DNA, RNA]}
+    - {name: volume_plausible, kind: range, column: volume_ul, min: 0, max: 50000}
+    - {name: status_valid, kind: in_set, column: status, values: [AVAILABLE, RESERVED, IN_TRANSIT, CONSUMED, DISCARDED]}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+
+  biomarker_assays_clean:
+    - {name: assay_result_id_pk, kind: primary_key, column: assay_result_id}
+    - {name: analyte_valid, kind: in_set, column: analyte, values: [ABETA42, ABETA40, PTAU181, PTAU217, TTAU, NFL, GFAP]}
+    - {name: unit_harmonised, kind: in_set, column: unit, values: [pg/mL]}
+    - {name: value_plausible, kind: range, column: value, min: 0, max: 1000000}
+    - {name: qc_status_valid, kind: in_set, column: qc_status, values: [PASS, WARN, FAIL]}
+
+  imaging_series_clean:
+    - {name: series_id_pk, kind: primary_key, column: series_id}
+    - {name: modality_valid, kind: in_set, column: modality, values: [MR, PT, CT]}
+    - {name: series_uid_format, kind: regex, column: series_id, pattern: '^[0-9]+(\.[0-9]+)*$'}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+    - {name: num_instances_plausible, kind: range, column: num_instances, min: 1, max: 100000}
+
+  imaging_measures_clean:
+    - {name: measure_id_pk, kind: primary_key, column: measure_id}
+    - {name: metric_valid, kind: in_set, column: metric, values: [VOLUME_MM3, SUVR, CORTICAL_THICKNESS_MM]}
+    - {name: value_plausible, kind: range, column: value, min: 0, max: 2000000}
+    - {name: series_id_present, kind: not_null, column: series_id}
+    - {name: pipeline_version_semver, kind: regex, column: pipeline_version, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$'}
+
+  omics_samples_clean:
+    - {name: omics_sample_id_pk, kind: primary_key, column: omics_sample_id}
+    - {name: assay_type_valid, kind: in_set, column: assay_type, values: [RNASEQ, WGS, GENOTYPING_ARRAY, PROTEOMICS]}
+    - {name: md5_format, kind: regex, column: file_md5, pattern: '^[0-9a-f]{32}$'}
+    - {name: read_count_plausible, kind: range, column: read_count, min: 0, max: 10000000000}
+    - {name: file_uri_scheme, kind: regex, column: file_uri, pattern: '^(s3|gs|abfss|file)://.+'}
+
+  omics_genotypes_clean:
+    - {name: call_id_pk, kind: primary_key, column: call_id}
+    - {name: rsid_format, kind: regex, column: variant_id, pattern: '^rs[0-9]+$'}
+    - {name: genotype_format, kind: regex, column: genotype, pattern: '^[ACGT]/[ACGT]$'}
+    - {name: quality_range, kind: range, column: quality, min: 0, max: 100}
+    - {name: omics_sample_id_present, kind: not_null, column: omics_sample_id}
+
+  cognitive_assessments_clean:
+    - {name: assessment_id_pk, kind: primary_key, column: assessment_id}
+    - {name: instrument_valid, kind: in_set, column: instrument, values: [MMSE, MOCA, CDR_SB, ADAS_COG13]}
+    - {name: score_range, kind: range, column: score, min: 0, max: 85}
+    - {name: visit_code_format, kind: regex, column: visit_code, pattern: '^(BL|M[0-9]{2})$'}
+    - {name: assessed_date_present, kind: not_null, column: assessed_date}
+
+  ctms_enrollment_clean:
+    - {name: enrollment_id_pk, kind: primary_key, column: enrollment_id}
+    - {name: status_valid, kind: in_set, column: status, values: [SCREENING, SCREEN_FAILED, ENROLLED, COMPLETED, WITHDRAWN]}
+    - {name: study_code_format, kind: regex, column: study_code, pattern: '^TL-[0-9]{3}$'}
+    - {name: enrolled_date_present, kind: not_null, column: enrolled_date}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+
+  consent_registry_clean:
+    - {name: consent_id_pk, kind: primary_key, column: consent_id}
+    - {name: scope_valid, kind: in_set, column: scope, values: [CLINICAL_DATA, BIOSAMPLES, GENETICS, IMAGING, RECONTACT]}
+    - {name: signed_date_present, kind: not_null, column: signed_date}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+    - {name: consent_version_format, kind: regex, column: consent_version, pattern: '^v[0-9]+(\.[0-9]+)?$'}
+
+  # -------------------------------------------------------------- curated layer
+  patient_master:
+    - {name: patient_id_pk, kind: primary_key, column: patient_id}
+    - {name: age_band_valid, kind: in_set, column: age_band, values: ['<50', '50-59', '60-69', '70-79', '80+', UNKNOWN]}
+    - {name: sex_valid, kind: in_set, column: sex, values: [M, F, X, U]}
+    - {name: postal_region_generalised, kind: regex, column: postal_region, pattern: '^[0-9]{2}$'}
+    - {name: non_empty, kind: row_count_min, min: 1}
+
+  encounter_timeline:
+    - {name: encounter_id_pk, kind: primary_key, column: encounter_id}
+    - {name: length_of_stay_plausible, kind: range, column: length_of_stay_days, min: 0, max: 365}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+    - {name: encounter_type_valid, kind: in_set, column: encounter_type, values: [OUTPATIENT, INPATIENT, EMERGENCY, TELEHEALTH, OTHER]}
+    - {name: admit_ts_present, kind: not_null, column: admit_ts}
+
+  diagnosis_curated:
+    - {name: diagnosis_id_pk, kind: primary_key, column: diagnosis_id}
+    - {name: diagnosis_group_valid, kind: in_set, column: diagnosis_group, values: [ALZHEIMERS, MCI, FTD, DLB, PARKINSONS, ALS, VASCULAR_DEMENTIA, OTHER]}
+    - {name: icd10_chapter_present, kind: not_null, column: icd10_chapter}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+    - {name: diagnosis_date_present, kind: not_null, column: diagnosis_date}
+
+  biomarker_timeseries:
+    - {name: measurement_id_pk, kind: primary_key, column: measurement_id}
+    - {name: analyte_valid, kind: in_set, column: analyte, values: [ABETA42, ABETA40, PTAU181, PTAU217, TTAU, NFL, GFAP, HBA1C, CREATININE, VITAMIN_B12, TSH, GLUCOSE, LDL_CHOLESTEROL]}
+    - {name: source_valid, kind: in_set, column: source, values: [ASSAY, LAB]}
+    - {name: value_plausible, kind: range, column: value, min: 0, max: 1000000}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+
+  specimen_inventory:
+    - {name: specimen_id_pk, kind: primary_key, column: specimen_id}
+    - {name: processing_delay_plausible, kind: range, column: processing_delay_hours, min: 0, max: 720}
+    - {name: storage_location_format, kind: regex, column: storage_location_id, pattern: '^FRZ-[0-9]{2}/R[0-9]{2}/B[0-9]{3}$'}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+    - {name: status_valid, kind: in_set, column: status, values: [AVAILABLE, RESERVED, IN_TRANSIT, CONSUMED, DISCARDED]}
+
+  imaging_studies:
+    - {name: series_id_pk, kind: primary_key, column: series_id}
+    - {name: modality_valid, kind: in_set, column: modality, values: [MR, PT, CT]}
+    - {name: amyloid_suvr_plausible, kind: range, column: amyloid_suvr, min: 0.5, max: 4.0}
+    - {name: hippocampal_volume_plausible, kind: range, column: hippocampal_volume_mm3, min: 2000, max: 12000}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+
+  omics_samples:
+    - {name: omics_sample_id_pk, kind: primary_key, column: omics_sample_id}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+    - {name: assay_type_valid, kind: in_set, column: assay_type, values: [RNASEQ, WGS, GENOTYPING_ARRAY, PROTEOMICS]}
+    - {name: qc_pass_present, kind: not_null, column: qc_pass}
+    - {name: md5_format, kind: regex, column: file_md5, pattern: '^[0-9a-f]{32}$'}
+
+  cognitive_scores:
+    - {name: assessment_id_pk, kind: primary_key, column: assessment_id}
+    - {name: score_normalized_range, kind: range, column: score_normalized, min: 0, max: 1}
+    - {name: impairment_flag_present, kind: not_null, column: impairment_flag}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+    - {name: instrument_valid, kind: in_set, column: instrument, values: [MMSE, MOCA, CDR_SB, ADAS_COG13]}
+
+  study_participation:
+    - {name: enrollment_id_pk, kind: primary_key, column: enrollment_id}
+    - {name: status_valid, kind: in_set, column: status, values: [SCREENING, SCREEN_FAILED, ENROLLED, COMPLETED, WITHDRAWN]}
+    - {name: consent_valid_present, kind: not_null, column: is_consent_valid}
+    - {name: study_code_format, kind: regex, column: study_code, pattern: '^TL-[0-9]{3}$'}
+    - {name: patient_id_present, kind: not_null, column: patient_id}
+
+  cohort_features:
+    - {name: patient_id_pk, kind: primary_key, column: patient_id}
+    - {name: age_band_valid, kind: in_set, column: age_band, values: ['<50', '50-59', '60-69', '70-79', '80+', UNKNOWN]}
+    - {name: diagnosis_group_valid, kind: in_set, column: primary_diagnosis_group, values: [ALZHEIMERS, MCI, FTD, DLB, PARKINSONS, ALS, VASCULAR_DEMENTIA, NONE]}
+    - {name: eligibility_present, kind: not_null, column: eligible_for_research}
+    - {name: non_empty, kind: row_count_min, min: 1}

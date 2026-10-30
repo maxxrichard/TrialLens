@@ -1,0 +1,103 @@
+# Action types: the only way users change data in TrialLens. Every action submission is
+# recorded in the ontology action log (who, when, parameters), which is the audit trail
+# for cohort definitions, biomarker review decisions and data-quality triage.
+#
+# backing.function names refer to Foundry Functions in functions-typescript/src/foundry.
+action_types:
+  - apiName: reviewBiomarkerMeasurement
+    displayName: Review biomarker measurement
+    description: Record an accept / exclude / repeat decision for a biomarker measurement.
+    backing: {function: reviewBiomarkerMeasurement}
+    parameters:
+      - {id: measurement, type: objectReference, objectType: BiomarkerMeasurement, required: true}
+      - {id: decision, type: string, required: true, allowedValues: [ACCEPTED, EXCLUDED, REPEAT_REQUESTED]}
+      - {id: reason, type: string, required: true, allowedValues: [QC_FAIL, OUT_OF_RANGE, PREANALYTICAL, IMPLAUSIBLE_CHANGE, OTHER, NONE]}
+      - {id: comment, type: string, required: false}
+    edits:
+      - {objectType: BiomarkerReview, operation: create}
+    submissionCriteria:
+      - {type: groupMembership, groups: [triallens-biomarker-reviewers]}
+      - {type: parameterRule, rule: "decision != 'EXCLUDED' or comment is not empty", message: Exclusions require a comment.}
+
+  - apiName: createCohort
+    displayName: Create cohort
+    description: Create a draft cohort from structured inclusion / exclusion criteria.
+    backing: {function: createCohortFromCriteria}
+    parameters:
+      - {id: name, type: string, required: true}
+      - {id: description, type: string, required: false}
+      - {id: study, type: objectReference, objectType: Study, required: false}
+      - {id: criteriaJson, type: string, required: true}
+    edits:
+      - {objectType: Cohort, operation: create}
+      - {objectType: CohortCriterion, operation: create}
+      - {objectType: CohortMembership, operation: create}
+    submissionCriteria:
+      - {type: groupMembership, groups: [triallens-scientists, triallens-clinicians]}
+
+  - apiName: addPatientsToCohort
+    displayName: Add patients to cohort
+    description: Manually add selected patients to a draft cohort.
+    backing: {function: addPatientsToCohort}
+    parameters:
+      - {id: cohort, type: objectReference, objectType: Cohort, required: true}
+      - {id: patients, type: objectReferenceList, objectType: Patient, required: true}
+      - {id: inclusionReason, type: string, required: true}
+    edits:
+      - {objectType: CohortMembership, operation: create}
+      - {objectType: Cohort, operation: modify}
+    submissionCriteria:
+      - {type: objectProperty, objectParameter: cohort, rule: "status == 'DRAFT'", message: Locked cohorts cannot be changed.}
+
+  - apiName: removePatientFromCohort
+    displayName: Remove patient from cohort
+    description: Remove one membership from a draft cohort.
+    backing: {function: removePatientFromCohort}
+    parameters:
+      - {id: membership, type: objectReference, objectType: CohortMembership, required: true}
+    edits:
+      - {objectType: CohortMembership, operation: delete}
+      - {objectType: Cohort, operation: modify}
+    submissionCriteria:
+      - {type: groupMembership, groups: [triallens-scientists, triallens-clinicians]}
+
+  - apiName: lockCohort
+    displayName: Lock cohort
+    description: Freeze a cohort's membership and criteria for a reproducible analysis.
+    backing: {rule: modifyObject}
+    parameters:
+      - {id: cohort, type: objectReference, objectType: Cohort, required: true}
+    edits:
+      - {objectType: Cohort, operation: modify, properties: {status: LOCKED, locked_ts: now()}}
+    submissionCriteria:
+      - {type: objectProperty, objectParameter: cohort, rule: "status == 'DRAFT'", message: Only draft cohorts can be locked.}
+      - {type: objectProperty, objectParameter: cohort, rule: "owner == currentUser", message: Only the cohort owner can lock it.}
+
+  - apiName: updateDataQualityIssue
+    displayName: Update data-quality issue
+    description: Assign, resolve or dismiss a data-quality issue.
+    backing: {function: updateDataQualityIssue}
+    parameters:
+      - {id: issue, type: objectReference, objectType: DataQualityIssue, required: true}
+      - {id: status, type: string, required: true, allowedValues: [OPEN, IN_PROGRESS, RESOLVED, DISMISSED]}
+      - {id: assignee, type: string, required: false}
+      - {id: resolutionNote, type: string, required: false}
+    edits:
+      - {objectType: DataQualityIssue, operation: modify}
+    submissionCriteria:
+      - {type: groupMembership, groups: [triallens-data-stewards]}
+
+  - apiName: requestSpecimenRetrieval
+    displayName: Request specimen retrieval
+    description: >-
+      Ask the biobank to retrieve specimens for an analysis. The request is sent to the
+      LIMS through a webhook; the LIMS remains the system of record for specimen status.
+    backing: {webhook: lims-retrieval-request}
+    parameters:
+      - {id: specimens, type: objectReferenceList, objectType: Specimen, required: true}
+      - {id: cohort, type: objectReference, objectType: Cohort, required: false}
+      - {id: purpose, type: string, required: true}
+    edits: []
+    submissionCriteria:
+      - {type: groupMembership, groups: [triallens-scientists]}
+      - {type: objectProperty, objectParameter: specimens, rule: "status == 'AVAILABLE'", message: Only available specimens can be requested.}

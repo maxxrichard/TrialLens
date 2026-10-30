@@ -1,0 +1,38 @@
+analysis: biomarker-trajectories
+title: Biomarker trajectories by diagnosis group
+audience: [triallens-scientists, triallens-biomarker-reviewers]
+description: >-
+  Longitudinal view of fluid biomarkers per diagnosis group, excluding QC-failed results.
+  The same aggregation is available as SQL in sql/biomarker_trajectories.sql.
+inputs:
+  - {id: patients, objectType: Patient}
+  - {id: measurements, objectType: BiomarkerMeasurement, linkFrom: {input: patients, link: patientBiomarkerMeasurements}}
+parameters:
+  - {id: analyte, type: enum, values: [ABETA42, ABETA40, PTAU181, PTAU217, TTAU, NFL, GFAP], default: PTAU217}
+cards:
+  - id: filtered
+    type: filter
+    input: measurements
+    conditions:
+      - {property: analyte, equals: "$analyte"}
+      - {property: qc_status, notEquals: FAIL}
+      - {property: source, equals: ASSAY}
+  - id: trajectory
+    type: line-chart
+    input: filtered
+    x: days_since_baseline
+    y: value
+    seriesBy: {input: patients, property: primary_diagnosis_group}
+    aggregation: median
+    bucket: {property: days_since_baseline, width: 180}
+  - id: distribution
+    type: box-plot
+    input: filtered
+    x: {input: patients, property: amyloid_status}
+    y: value
+  - id: perPatientSlope
+    type: derived-series
+    input: filtered
+    groupBy: patient_id
+    expression: linear_regression_slope(value, days_since_baseline) * 365
+    unit: per year

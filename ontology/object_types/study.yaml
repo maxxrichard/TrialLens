@@ -1,0 +1,85 @@
+domain: study
+object_types:
+  - apiName: Study
+    displayName: Study
+    pluralDisplayName: Studies
+    description: Observational study or clinical trial run on the TrialLens platform.
+    primaryKey: study_code
+    titleProperty: study_title
+    markings: [TRIALLENS_OPERATIONAL]
+    backing:
+      source: clean/ctms_enrollment_clean
+      group_by: [study_code]
+      aggregations:
+        study_title: max(study_title)
+        study_phase: max(study_phase)
+        n_enrollments: count(*)
+        n_sites: count(DISTINCT site_code)
+    properties:
+      study_code: string
+      study_title: string
+      study_phase: string
+      n_enrollments: integer
+      n_sites: integer
+
+  - apiName: Enrollment
+    displayName: Enrollment
+    description: A patient's participation in a study, with the current consent state per scope.
+    primaryKey: enrollment_id
+    titleProperty: enrollment_id
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      source: curated/study_participation
+    properties:
+      enrollment_id: string
+      patient_id: string
+      study_code: string
+      arm: string
+      site_code: string
+      enrolled_date: date
+      status: string
+      withdrawn_date: date
+      consent_clinical_data: boolean
+      consent_biosamples: boolean
+      consent_genetics: boolean
+      consent_imaging: boolean
+      consent_recontact: boolean
+      is_consent_valid: boolean
+
+  - apiName: Visit
+    displayName: Visit
+    description: Protocol visit (baseline or follow-up month) derived from eCRF assessments.
+    primaryKey: visit_id
+    titleProperty: visit_code
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      source: curated/cognitive_scores
+      group_by: [visit_id, patient_id, visit_code]
+      aggregations:
+        visit_date: min(assessed_date)
+        n_assessments: count(*)
+    properties:
+      visit_id: string
+      patient_id: string
+      visit_code: string
+      visit_date: date
+      n_assessments: integer
+
+  - apiName: ConsentRecord
+    displayName: Consent Record
+    description: Signed (or withdrawn) informed consent for one scope of one study.
+    primaryKey: consent_id
+    titleProperty: scope
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      source: clean/consent_registry_clean
+    properties:
+      consent_id: string
+      patient_id: string
+      study_code: string
+      consent_version: string
+      scope: string
+      granted: boolean
+      signed_date: date
+      withdrawn_date: date
+      is_active: boolean

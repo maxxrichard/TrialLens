@@ -1,0 +1,22 @@
+# Pipeline Builder pipeline (exported definition, reviewed in Git). See imaging-series.yaml.
+pipeline: imaging-measures
+owner_team: Neuroimaging Core
+inputs: [raw/imaging_derived_measures]
+output: clean/imaging_measures_clean
+reference_implementation: triallens.logic.imaging.clean_imaging_measures
+boards:
+  - {id: trim, type: trim-whitespace, columns: all}
+  - {id: series, type: rename, from: series_instance_uid, to: series_id}
+  - {id: region, type: regex-replace, column: region, pattern: "[^A-Z0-9]+", replacement: _, upper: true}
+  - id: metric
+    type: map-values
+    column: metric
+    normalize: alphanumeric-upper
+    mapping: {VOLUMEMM3: VOLUME_MM3, VOLUME: VOLUME_MM3, SUVR: SUVR, CORTICALTHICKNESSMM: CORTICAL_THICKNESS_MM, THICKNESS: CORTICAL_THICKNESS_MM}
+    unmapped: "null"
+  - {id: version, type: regex-replace, column: pipeline_version, pattern: "^[Vv]", replacement: v}
+  - {id: value, type: cast, columns: {value: double}, decimal_comma: true}
+  - {id: ts, type: parse-timestamp, column: computed_ts, formats: ["yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "dd.MM.yyyy HH:mm"]}
+  - {id: valid, type: filter, condition: "measure_id IS NOT NULL AND series_id IS NOT NULL AND metric IS NOT NULL AND value BETWEEN 0 AND 2000000"}
+  - {id: dedupe, type: drop-duplicates, keys: [measure_id]}
+expectations: see transforms-python/src/triallens/config/expectations.yaml#imaging_measures_clean

@@ -1,0 +1,76 @@
+domain: omics
+object_types:
+  - apiName: OmicsSample
+    displayName: Omics Sample
+    description: Sample processed by an omics assay (RNA-seq, WGS, genotyping array, proteomics).
+    primaryKey: omics_sample_id
+    titleProperty: omics_sample_id
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL, TRIALLENS_GENETIC]
+    backing:
+      source: curated/omics_samples
+    properties:
+      omics_sample_id: string
+      specimen_id: string
+      patient_id: string
+      assay_type: string
+      sequencing_run_id: string
+      run_date: date
+      read_count: long
+      qc_pass: boolean
+
+  - apiName: SequencingRun
+    displayName: Sequencing Run
+    description: Sequencing or genotyping run with QC failure counts.
+    primaryKey: sequencing_run_id
+    titleProperty: sequencing_run_id
+    markings: [TRIALLENS_OPERATIONAL]
+    backing:
+      source: curated/omics_samples
+      filter: sequencing_run_id IS NOT NULL
+      group_by: [sequencing_run_id]
+      aggregations:
+        instrument: max(instrument)
+        flowcell: max(flowcell)
+        run_date: min(run_date)
+        n_samples: count(*)
+        n_qc_failed: sum(CASE WHEN qc_pass THEN 0 ELSE 1 END)
+    properties:
+      sequencing_run_id: string
+      instrument: string
+      flowcell: string
+      run_date: date
+      n_samples: integer
+      n_qc_failed: integer
+
+  - apiName: GenotypeCall
+    displayName: Genotype Call
+    description: Targeted genotype call (e.g. APOE rs429358 / rs7412).
+    primaryKey: call_id
+    titleProperty: variant_id
+    markings: [TRIALLENS_GENETIC]
+    backing:
+      source: clean/omics_genotypes_clean
+    properties:
+      call_id: string
+      omics_sample_id: string
+      gene: string
+      variant_id: string
+      genotype: string
+      quality: double
+
+  - apiName: OmicsFile
+    displayName: Omics File
+    description: Raw or processed omics file in object storage, identified by its MD5 checksum.
+    primaryKey: file_id
+    titleProperty: file_uri
+    markings: [TRIALLENS_GENETIC]
+    backing:
+      source: curated/omics_samples
+      filter: file_md5 IS NOT NULL
+      columns:
+        file_id: file_md5
+    properties:
+      file_id: string
+      omics_sample_id: string
+      assay_type: string
+      file_uri: string

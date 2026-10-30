@@ -1,0 +1,63 @@
+# One-to-many link types. `foreignKey` is the property on the `many` side that holds
+# the primary key of the `one` side. Many-to-many relationships (patients <-> cohorts)
+# are modelled through join objects (CohortMembership) so they stay auditable.
+link_types:
+  # Patient-centric
+  - {apiName: patientEncounters, one: Patient, many: Encounter, foreignKey: patient_id}
+  - {apiName: patientDiagnoses, one: Patient, many: Diagnosis, foreignKey: patient_id}
+  - {apiName: patientMedications, one: Patient, many: Medication, foreignKey: patient_id}
+  - {apiName: patientCognitiveAssessments, one: Patient, many: CognitiveAssessment, foreignKey: patient_id}
+  - {apiName: patientVisits, one: Patient, many: Visit, foreignKey: patient_id}
+  - {apiName: patientEnrollments, one: Patient, many: Enrollment, foreignKey: patient_id}
+  - {apiName: patientConsents, one: Patient, many: ConsentRecord, foreignKey: patient_id}
+  - {apiName: patientLabResults, one: Patient, many: LabResult, foreignKey: patient_id}
+  - {apiName: patientBiomarkerMeasurements, one: Patient, many: BiomarkerMeasurement, foreignKey: patient_id}
+  - {apiName: patientSpecimens, one: Patient, many: Specimen, foreignKey: patient_id}
+  - {apiName: patientImagingStudies, one: Patient, many: ImagingStudy, foreignKey: patient_id}
+  - {apiName: patientImagingSeries, one: Patient, many: ImagingSeries, foreignKey: patient_id}
+  - {apiName: patientOmicsSamples, one: Patient, many: OmicsSample, foreignKey: patient_id}
+  - {apiName: patientCohortMemberships, one: Patient, many: CohortMembership, foreignKey: patient_id}
+  - {apiName: patientDataQualityIssues, one: Patient, many: DataQualityIssue, foreignKey: patient_id}
+
+  # Clinical
+  - {apiName: encounterDiagnoses, one: Encounter, many: Diagnosis, foreignKey: encounter_id}
+  - {apiName: visitCognitiveAssessments, one: Visit, many: CognitiveAssessment, foreignKey: visit_id}
+
+  # Study
+  - {apiName: studyEnrollments, one: Study, many: Enrollment, foreignKey: study_code}
+  - {apiName: siteEnrollments, one: Site, many: Enrollment, foreignKey: site_code}
+  - {apiName: studyConsents, one: Study, many: ConsentRecord, foreignKey: study_code}
+  - {apiName: studyCohorts, one: Study, many: Cohort, foreignKey: study_code}
+
+  # Lab & biomarker
+  - {apiName: labTestResults, one: LabTest, many: LabResult, foreignKey: loinc_code}
+  - {apiName: biomarkerMeasurements, one: Biomarker, many: BiomarkerMeasurement, foreignKey: analyte}
+  - {apiName: biomarkerReferenceRanges, one: Biomarker, many: ReferenceRange, foreignKey: analyte}
+  - {apiName: assayRunMeasurements, one: AssayRun, many: BiomarkerMeasurement, foreignKey: run_id}
+  - {apiName: measurementReviews, one: BiomarkerMeasurement, many: BiomarkerReview, foreignKey: measurement_id}
+
+  # Specimens
+  - {apiName: specimenMeasurements, one: Specimen, many: BiomarkerMeasurement, foreignKey: specimen_id}
+  - {apiName: specimenLabResults, one: Specimen, many: LabResult, foreignKey: specimen_id}
+  - {apiName: specimenAliquots, one: Specimen, many: Specimen, foreignKey: parent_specimen_id}
+  - {apiName: storageLocationSpecimens, one: StorageLocation, many: Specimen, foreignKey: storage_location_id}
+  - {apiName: freezerStorageLocations, one: Freezer, many: StorageLocation, foreignKey: freezer_id}
+  - {apiName: shipmentSpecimens, one: Shipment, many: Specimen, foreignKey: shipment_id}
+  - {apiName: specimenOmicsSamples, one: Specimen, many: OmicsSample, foreignKey: specimen_id}
+
+  # Imaging
+  - {apiName: imagingStudySeries, one: ImagingStudy, many: ImagingSeries, foreignKey: study_id}
+  - {apiName: seriesMeasures, one: ImagingSeries, many: ImagingMeasure, foreignKey: series_id}
+  - {apiName: scannerSeries, one: Scanner, many: ImagingSeries, foreignKey: scanner_id}
+
+  # Omics
+  - {apiName: sequencingRunSamples, one: SequencingRun, many: OmicsSample, foreignKey: sequencing_run_id}
+  - {apiName: omicsSampleGenotypeCalls, one: OmicsSample, many: GenotypeCall, foreignKey: omics_sample_id}
+  - {apiName: omicsSampleFiles, one: OmicsSample, many: OmicsFile, foreignKey: omics_sample_id}
+
+  # Cohorts
+  - {apiName: cohortMemberships, one: Cohort, many: CohortMembership, foreignKey: cohort_id}
+  - {apiName: cohortCriteria, one: Cohort, many: CohortCriterion, foreignKey: cohort_id}
+
+  # Governance
+  - {apiName: checkIssues, one: DataQualityCheck, many: DataQualityIssue, foreignKey: check_id}

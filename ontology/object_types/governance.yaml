@@ -1,0 +1,65 @@
+domain: governance
+object_types:
+  - apiName: DataSource
+    displayName: Data Source
+    description: Upstream system integrated into TrialLens, with ownership and refresh cadence.
+    primaryKey: source_id
+    titleProperty: display_name
+    markings: [TRIALLENS_OPERATIONAL]
+    backing:
+      builder: data_sources
+    properties:
+      source_id: string
+      display_name: string
+      source_system: string
+      domain: string
+      ingestion_format: string
+      refresh_cadence: string
+      owner_team: string
+      contains_personal_data: boolean
+      markings: string
+      raw_dataset_path: string
+
+  - apiName: DataQualityCheck
+    displayName: Data Quality Check
+    description: A dataset expectation (build-blocking) or a record-level rule (raises issues).
+    primaryKey: check_id
+    titleProperty: check_name
+    markings: [TRIALLENS_OPERATIONAL]
+    backing:
+      builder: data_quality_checks
+    properties:
+      check_id: string
+      check_name: string
+      check_type: string
+      dataset: string
+      column_name: string
+      kind: string
+      severity: string
+      on_error: string
+      description: string
+
+  - apiName: DataQualityIssue
+    displayName: Data Quality Issue
+    description: >-
+      A record flagged by a record-level rule. Status, assignee and resolution note are
+      edited from the data-quality dashboard via updateDataQualityIssue.
+    primaryKey: issue_id
+    titleProperty: rule_code
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+    backing:
+      builder: data_quality_issues
+    editableProperties: [status, assignee, resolution_note]
+    properties:
+      issue_id: string
+      check_id: string
+      rule_code: string
+      severity: string
+      source_dataset: string
+      record_id: string
+      patient_id: string
+      status: string
+      assignee: string
+      resolution_note: string
+      detected_date: date
+      description: string

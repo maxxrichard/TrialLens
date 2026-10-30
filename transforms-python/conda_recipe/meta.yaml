@@ -1,0 +1,21 @@
+# Foundry Python transforms environment.
+package:
+  name: "{{ PACKAGE_NAME }}"
+  version: "{{ PACKAGE_VERSION }}"
+
+source:
+  path: ../src
+
+requirements:
+  build:
+    - python 3.10.*
+    - setuptools
+
+  run:
+    - python 3.10.*
+    - transforms {{ PYTHON_TRANSFORMS_VERSION }}
+    - transforms-expectations
+    - pyyaml
+
+build:
+  script: python setup.py install --single-version-externally-managed --record=record.txt

@@ -1,0 +1,50 @@
+app: data-quality-dashboard
+title: Data Quality
+audience: [triallens-data-stewards, triallens-data-engineers]
+description: >-
+  One place for dataset expectations (build health) and record-level issues. Stewards
+  triage issues by priority and SLA; engineers see which checks fail on which datasets.
+variables:
+  - {id: selectedIssue, type: object, objectType: DataQualityIssue}
+  - {id: selectedCheck, type: object, objectType: DataQualityCheck}
+pages:
+  - id: overview
+    title: Overview
+    widgets:
+      - id: openIssues
+        type: metric-card
+        objectType: DataQualityIssue
+        aggregation: {count: true, filter: {property: status, in: [OPEN, IN_PROGRESS]}}
+      - id: issuesBySeverity
+        type: chart-bar
+        objectType: DataQualityIssue
+        x: severity
+        groupBy: rule_code
+      - id: sources
+        type: object-table
+        objectType: DataSource
+        columns: [display_name, source_system, domain, refresh_cadence, owner_team, contains_personal_data]
+      - id: checks
+        type: object-table
+        objectType: DataQualityCheck
+        columns: [check_id, check_type, dataset, column_name, kind, severity, on_error]
+        writes: [selectedCheck]
+  - id: triage
+    title: Triage
+    widgets:
+      - id: queue
+        type: object-table
+        objectType: DataQualityIssue
+        orderFunction: DataQualityFunctions.triagedIssueIds
+        columns: [rule_code, severity, source_dataset, record_id, patient_id, status, assignee, detected_date]
+        derivedColumns:
+          - {name: priority, function: DataQualityFunctions.issuePriority}
+        writes: [selectedIssue]
+      - id: issueDetail
+        type: object-view
+        objectType: DataQualityIssue
+        variable: selectedIssue
+      - id: issueActions
+        type: button-group
+        actions:
+          - {action: updateDataQualityIssue, parameters: {issue: selectedIssue}}

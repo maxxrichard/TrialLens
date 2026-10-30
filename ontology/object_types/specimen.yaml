@@ -1,0 +1,83 @@
+domain: specimen
+object_types:
+  - apiName: Specimen
+    displayName: Specimen
+    description: Physical biobank tube (primary sample or aliquot) tracked in the LIMS.
+    primaryKey: specimen_id
+    titleProperty: specimen_id
+    markings: [TRIALLENS_PSEUDONYMIZED_CLINICAL, TRIALLENS_BIOSAMPLE_OPS]
+    backing:
+      source: curated/specimen_inventory
+    properties:
+      specimen_id: string
+      patient_id: string
+      parent_specimen_id: string
+      specimen_type: string
+      collected_ts: timestamp
+      received_ts: timestamp
+      processing_delay_hours: double
+      storage_location_id: string
+      volume_ul: double
+      shipment_id: string
+      status: string
+
+  - apiName: Freezer
+    displayName: Freezer
+    description: Ultra-low temperature freezer in the biobank.
+    primaryKey: freezer_id
+    titleProperty: freezer_id
+    markings: [TRIALLENS_BIOSAMPLE_OPS]
+    backing:
+      source: clean/lims_specimens_clean
+      filter: freezer_id IS NOT NULL
+      group_by: [freezer_id]
+      aggregations:
+        n_specimens: count(*)
+        n_boxes: count(DISTINCT storage_location_id)
+    properties:
+      freezer_id: string
+      n_specimens: integer
+      n_boxes: integer
+
+  - apiName: StorageLocation
+    displayName: Storage Location
+    description: Box position (freezer / rack / box) holding specimens.
+    primaryKey: storage_location_id
+    titleProperty: storage_location_id
+    markings: [TRIALLENS_BIOSAMPLE_OPS]
+    backing:
+      source: clean/lims_specimens_clean
+      filter: storage_location_id IS NOT NULL
+      group_by: [storage_location_id, freezer_id, rack, box]
+      aggregations:
+        n_specimens: count(*)
+        total_volume_ul: sum(volume_ul)
+    properties:
+      storage_location_id: string
+      freezer_id: string
+      rack: string
+      box: string
+      n_specimens: integer
+      total_volume_ul: double
+
+  - apiName: Shipment
+    displayName: Shipment
+    description: Specimen shipment between collection site, biobank and analysis laboratories.
+    primaryKey: shipment_id
+    titleProperty: shipment_id
+    markings: [TRIALLENS_BIOSAMPLE_OPS]
+    backing:
+      source: clean/lims_specimens_clean
+      filter: shipment_id IS NOT NULL
+      group_by: [shipment_id]
+      aggregations:
+        n_specimens: count(*)
+        n_in_transit: sum(CASE WHEN status = 'IN_TRANSIT' THEN 1 ELSE 0 END)
+        first_collected_ts: min(collected_ts)
+        last_received_ts: max(received_ts)
+    properties:
+      shipment_id: string
+      n_specimens: integer
+      n_in_transit: integer
+      first_collected_ts: timestamp
+      last_received_ts: timestamp

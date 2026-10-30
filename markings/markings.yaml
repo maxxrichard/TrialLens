@@ -1,0 +1,76 @@
+# Markings and access model.
+#
+# Markings are mandatory access controls: a user must satisfy ALL markings on a
+# resource (dataset, object type, file) to see it, independent of project roles.
+# Markings propagate along lineage; they are only removed where a transform provably
+# removes the protected content (see `propagation`).
+
+markings:
+  - id: TRIALLENS_DIRECT_IDENTIFIERS
+    category: TrialLens Privacy
+    description: >-
+      Directly identifying personal data (MRN, full birth date, full postal code,
+      ethnicity). Restricted to the raw layer and the restricted clean layer.
+    gdpr_basis: Art. 6(1)(e), Art. 9(2)(j) GDPR; national research provisions
+    members: [triallens-pseudonymization-service, triallens-dpo-auditors]
+
+  - id: TRIALLENS_PSEUDONYMIZED_CLINICAL
+    category: TrialLens Privacy
+    description: Pseudonymised clinical data (keyed by TL-P-* pseudonyms, data-minimised).
+    gdpr_basis: Art. 89 GDPR (research with safeguards)
+    members: [triallens-data-engineers, triallens-scientists, triallens-clinicians, triallens-biomarker-reviewers, triallens-data-stewards, triallens-dpo-auditors]
+
+  - id: TRIALLENS_GENETIC
+    category: TrialLens Privacy
+    description: Genetic data (Art. 9 special category); requires an active GENETICS consent scope.
+    gdpr_basis: Art. 9(2)(j) GDPR
+    members: [triallens-genetics-analysts, triallens-data-engineers, triallens-dpo-auditors]
+
+  - id: TRIALLENS_IMAGING
+    category: TrialLens Privacy
+    description: Imaging metadata and derived measures (DICOM headers may contain identifiers).
+    gdpr_basis: Art. 89 GDPR
+    members: [triallens-imaging-analysts, triallens-scientists, triallens-data-engineers, triallens-dpo-auditors]
+
+  - id: TRIALLENS_BIOSAMPLE_OPS
+    category: TrialLens Operations
+    description: Biobank operational data (freezer locations, shipments, assay runs).
+    gdpr_basis: n/a (no personal data on its own)
+    members: [triallens-biobank, triallens-biomarker-reviewers, triallens-scientists, triallens-data-engineers]
+
+  - id: TRIALLENS_OPERATIONAL
+    category: TrialLens Operations
+    description: Non-personal reference and operational metadata (catalogues, studies, sites, checks).
+    gdpr_basis: n/a
+    members: [triallens-all-users]
+
+groups:
+  - {id: triallens-all-users, description: Everyone with a TrialLens account}
+  - {id: triallens-pseudonymization-service, description: Service user running the clean-layer transforms}
+  - {id: triallens-data-engineers, description: Pipeline and ontology developers}
+  - {id: triallens-data-stewards, description: Triage data-quality issues}
+  - {id: triallens-scientists, description: Translational scientists building cohorts}
+  - {id: triallens-clinicians, description: Clinicians reviewing patients and cohorts}
+  - {id: triallens-biomarker-reviewers, description: Laboratory scientists reviewing biomarker results}
+  - {id: triallens-biobank, description: Biobank operations staff}
+  - {id: triallens-genetics-analysts, description: Analysts approved for genetic data}
+  - {id: triallens-imaging-analysts, description: Neuroimaging analysts}
+  - {id: triallens-dpo-auditors, description: "Data protection officer and auditors (read-only, incl. audit logs)"}
+
+# Where markings may be removed along lineage (Foundry `stop_propagating`).
+propagation:
+  - marking: TRIALLENS_DIRECT_IDENTIFIERS
+    removed_by: clean-layer transforms
+    justification: >-
+      MRNs are replaced by keyed pseudonyms; full birth dates, full postal codes and
+      ethnicity are dropped before the curated layer. Re-identification requires the
+      salt in /TrialLens/secure/pseudonymization_key (DPO-only).
+    datasets: [curated/*]
+    requires_approval_from: [triallens-dpo-auditors]
+
+# Layer -> markings that every dataset in the layer carries at minimum.
+layer_markings:
+  raw: [TRIALLENS_DIRECT_IDENTIFIERS]
+  clean: [TRIALLENS_DIRECT_IDENTIFIERS]
+  curated: [TRIALLENS_PSEUDONYMIZED_CLINICAL]
+  ontology: []  # per object type, see ontology/object_types/*.yaml
